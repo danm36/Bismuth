@@ -12,7 +12,8 @@ using System.Threading;
 
 namespace Bismuth
 {
-    public static class NetworkManager
+    [BismuthManagerInfo("BISMUTH_NETWORK", "Network Manager", "Handles HTTP Communications on the network")]
+    public class NetworkManager : BismuthGenericManager
     {
         static TcpListener server = null;
         static List<Thread> threadPool = new List<Thread>();
@@ -20,18 +21,19 @@ namespace Bismuth
         public static int Port { get; private set; }
         public static int ConnectionTTL { get; private set; }
 
-        public static bool Setup()
+        public override bool Setup()
         {
             Port = 8080;
             server = new TcpListener(IPAddress.Any, Port); //TODO: Config
             server.Start();
+            LogManager.WriteLine("HTTP server started for " + server.LocalEndpoint.ToString(), ConsoleColor.Green);
 
-            ConnectionTTL = 15000;
+            ConnectionTTL = 5000;
 
             return true;
         }
 
-        public static void Shutdown()
+        public override bool Shutdown()
         {
             for (int i = 0; i < threadPool.Count; i++)
             {
@@ -40,11 +42,13 @@ namespace Bismuth
 
             threadPool.Clear();
             server.Stop();
+
+            return true;
         }
 
         public static void ListenForNewConnections()
         {
-            if (server.Pending())
+            if (!Program.ShutDown && server.Pending())
             {
                 TcpClient client = server.AcceptTcpClient();
                 Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientThread));
@@ -71,8 +75,9 @@ namespace Bismuth
             }
             catch (ThreadAbortException)
             {
-                client.Close();
                 LogManager.Warn(client, "Connection forcably closed - Thread aborted");
+                if(client.Connected)
+                    client.Close();
             }
             catch (Exception e)
             {
@@ -123,44 +128,62 @@ namespace Bismuth
 
                 //HTTP parse
                 string request = Encoding.ASCII.GetString(requestData, 0, requestData.Length);
-                HTTPHeaderData header = new HTTPHeaderData(request);
+                HTTPHeaderData requestHeader = new HTTPHeaderData(request);
 
-                if (header.InvalidHeader)
+                if (requestHeader.InvalidHeader)
                 {
                     //Maybe it's SSL? Can't handle that
                     LogManager.Error(client, "Recieved SSL - Cannot Handle (Yet)");
                     HTTPResponse sslErrorResponse = SimpleResponseManager.PrepareSimpleResponse(EHTTPResponse.R501_NotImplemented, null);
-                    sslErrorResponse.WriteToStream(stream, true);
+                    sslErrorResponse.WriteToStream(stream, requestHeader, true);
                     break;
                 }
 
-                if (!header.HasHeaderField("Connection") || !header.GetHeaderField("Connection").Contains("keep-alive"))
+                if (!requestHeader.HasHeaderField("Connection") || !requestHeader.GetHeaderField("Connection").Contains("keep-alive"))
                     closingConnection = true;
 
-                lastHTTPVersion = header.HTTPVersion;
+                lastHTTPVersion = requestHeader.HTTPVersion;
 
                 //TODO: Plugin parse headers
 
-                LogManager.Log(client, "Requested " + (header.HasHeaderField("Host") ? header.GetHeaderField("Host") : "") + header.GetRequestedResource());
+                string requestLogStr = "Requested " + (requestHeader.HasHeaderField("Host") ? requestHeader.GetHeaderField("Host") : "") + requestHeader.GetRequestedResource();
 
-                VirtualHost vhost = VirtualHostManager.GetVirtualHost(header.GetHeaderField("Host"));
+                VirtualHost vhost = VirtualHostManager.GetVirtualHost(requestHeader.GetHeaderField("Host"));
                 HTTPResponse response = null;
                 if (vhost == null)
                 {
-                    response = SimpleResponseManager.PrepareSimpleResponse(EHTTPResponse.R404_NotFound, header);
+                    response = SimpleResponseManager.PrepareSimpleResponse(EHTTPResponse.R404_NotFound, requestHeader);
+                    requestLogStr += " - 404";
                 }
                 else
                 {
-                    response = vhost.GetResource(header);
+                    string resourceLoc = vhost.GetFinalResourceLocation(requestHeader);
+                    string clientETag = HTTPResponse.MakeETag(resourceLoc);
+                    string IFNONEMATCH = requestHeader.GetHeaderField("If-None-Match");
+                    bool TEST = clientETag == IFNONEMATCH;
 
-                    if(header.HasHeaderField("ETag") && header.GetHeaderField("ETag") == response.ETag)
-                        response = SimpleResponseManager.PrepareSimpleResponse(EHTTPResponse.R304_NotModified, header);
+                    if (clientETag != null && (
+                            (requestHeader.HasHeaderField("If-Modified-Since") && vhost.HasBeenModifiedSince(resourceLoc, DateTime.Parse(requestHeader.GetHeaderField("If-Modified-Since")))) ||
+                            (requestHeader.HasHeaderField("If-None-Match") && requestHeader.GetHeaderField("If-None-Match") == clientETag)
+                        ))
+                    {
+                        response = SimpleResponseManager.PrepareSimpleResponse(EHTTPResponse.R304_NotModified, requestHeader);
+                        requestLogStr += " - 304";
+                    }
+                    else
+                    {
+                        response = vhost.GetResource(requestHeader);
+                    }
                 }
 
                 if (response == null)
-                    response = SimpleResponseManager.PrepareSimpleResponse(EHTTPResponse.R500_InternalServerError, header);
+                {
+                    response = SimpleResponseManager.PrepareSimpleResponse(EHTTPResponse.R500_InternalServerError, requestHeader);
+                    requestLogStr += " - 500";
+                }
 
-                response.WriteToStream(stream, closingConnection);
+                LogManager.Log(client, requestLogStr);
+                response.WriteToStream(stream, requestHeader, closingConnection);
             }
 
             LogManager.Log(client, "Closing connection");

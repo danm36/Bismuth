@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace Bismuth
 {
-    public static class SimpleResponseManager
+    [BismuthManagerInfo("BISMUTH_SIMPLERESPONSE", "Simple Response Manager", "Handles the creation of simple server responses")]
+    public class SimpleResponseManager : BismuthGenericManager
     {
         //TODO: Make configurable
         private const string SimpleResponsePageLayout = @"<!DOCTYPE html>

@@ -15,7 +15,7 @@ namespace Bismuth
         DateTime lastModified = DateTime.MinValue;
         public string ContentType = null;
 
-        MD5 md5 = MD5.Create();
+        static MD5 md5 = MD5.Create();
         public string ETag = "";
 
         public HTTPResponse(EHTTPVersion httpVersion, EHTTPResponse httpResponse)
@@ -43,21 +43,44 @@ namespace Bismuth
             Body = pBody;
             ContentType = contentType;
             lastModified = pLastModified;
+        }
 
-            byte[] hash = md5.ComputeHash(Body);
+
+        public string SetETag(string fileLocation)
+        {
+            return SetETag(fileLocation, File.GetLastWriteTimeUtc(fileLocation));
+        }
+
+        public string SetETag(string UID, DateTime pLastModified)
+        {
+            return ETag = MakeETag(UID, pLastModified);
+        }
+
+        public static string MakeETag(string fileLocation)
+        {
+            if (fileLocation == null)
+                return null;
+
+            if(File.Exists(fileLocation))
+                return MakeETag(fileLocation, File.GetLastWriteTimeUtc(fileLocation));
+
+            return MakeETag(fileLocation, DateTime.MinValue);
+        }
+
+        public static string MakeETag(string UID, DateTime pLastModified)
+        {
+            byte[] hash = md5.ComputeHash(Encoding.ASCII.GetBytes(UID + "/" + pLastModified.ToBinary()));
 
             StringBuilder pendingETag = new StringBuilder();
             for (int i = 0; i < hash.Length; ++i)
                 pendingETag.Append(hash[i].ToString("X2"));
 
-            ETag = pendingETag.ToString();
+            return "\"" + pendingETag.ToString() + "\"";
         }
 
 
-        public void WriteToStream(Stream stream, bool closingConnection = true)
+        public void WriteToStream(Stream stream, HTTPHeaderData requestHeader, bool closingConnection = true)
         {
-            Header.HTTPResponseCode = EHTTPResponse.R200_OK;
-
             Header.AddHeaderField("Connection", closingConnection ? "close" : "keep-alive")
                 .AddHeaderField("Date", DateTime.Now.ToUniversalTime().ToString("r"))
                 .AddHeaderField("Server", Program.GetVersionString())
@@ -68,12 +91,26 @@ namespace Bismuth
             if (ContentType != null) Header.AddHeaderField("Content-Type", ContentType);
             if (lastModified != DateTime.MinValue) Header.AddHeaderField("Last-Modified", lastModified.ToUniversalTime().ToString("r"));
 
+            byte[] finalBody = Body;
+
+            if (requestHeader.HasHeaderField("Accept-Encoding"))
+            {
+                string[] encodings = requestHeader.GetHeaderField("Accept-Encoding").Split(',');
+
+                for (int i = 0; i < encodings.Length; ++i)
+                {
+                    if (EncodingManager.CanEncode(encodings[i].Trim()) && EncodingManager.Encode(encodings[i].Trim(), finalBody, out finalBody))
+                    {
+                        Header.AddHeaderField("Content-Encoding", encodings[i]);
+                        break;
+                    }
+                }
+            }
+
             byte[] headerData = Encoding.ASCII.GetBytes(Header.ToString());
             stream.Write(headerData, 0, headerData.Length);
-            stream.Write(Body, 0, Body.Length);
+            stream.Write(finalBody, 0, finalBody.Length);
             stream.Flush();
-
-            md5.Dispose();
         }
     }
 }

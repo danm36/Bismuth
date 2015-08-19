@@ -6,15 +6,18 @@ using System.Threading.Tasks;
 
 namespace Bismuth
 {
-    public static class VirtualHostManager
+    [BismuthManagerInfo("BISMUTH_VHOST", "Virtual Host Manager", "Handles Virtual Hosts")]
+    public class VirtualHostManager : BismuthGenericManager
     {
         static Dictionary<string, VirtualHost> vhosts = new Dictionary<string, VirtualHost>();
 
-        public static void Setup()
+        public override bool Setup()
         {
             AddVirtualHost("*", new VirtualHost("H:/htdocs"));
             AddVirtualHost("deventas.co.uk", new VirtualHost(Environment.CurrentDirectory + "/htdocs"));
             AddVirtualHost("216.158.230.84", new VirtualHost(Environment.CurrentDirectory + "/htdocs"));
+
+            return true;
         }
 
         public static void AddVirtualHost(string domain, VirtualHost vhost)

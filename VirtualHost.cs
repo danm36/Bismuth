@@ -18,14 +18,13 @@ namespace Bismuth
             LocalRootDirectory = localRoot.Replace('\\', '/');
         }
 
-        public HTTPResponse GetResource(HTTPHeaderData headers)
+        public string GetFinalResourceLocation(HTTPHeaderData headers)
         {
             string resourceLoc = LocalRootDirectory + headers.GetRequestedResource();
-            HTTPResponse response = new HTTPResponse(headers.HTTPVersion, EHTTPResponse.R200_OK);
 
             if (File.Exists(resourceLoc))
             {
-                response.SetResponseBody(File.ReadAllBytes(resourceLoc), MIMETypeManager.GetMIMEFromFilePath(resourceLoc));
+                return resourceLoc;
             }
             else if (resourceLoc.EndsWith("/") || resourceLoc.EndsWith("\\"))
             {
@@ -33,10 +32,35 @@ namespace Bismuth
                 {
                     if (File.Exists(resourceLoc + DirectoryIndexes[i]))
                     {
-                        string trueResourceLoc = resourceLoc + DirectoryIndexes[i];
-                        response.SetResponseBody(File.ReadAllBytes(trueResourceLoc), MIMETypeManager.GetMIMEFromFilePath(trueResourceLoc));
+                        return resourceLoc + DirectoryIndexes[i];
                     }
                 }
+
+                //Return generated directory info
+            }
+
+            return null;
+        }
+
+        public bool HasBeenModifiedSince(string resourceLocation, DateTime checkTime)
+        {
+            if (resourceLocation == null)
+                return true;
+
+            return File.GetLastWriteTime(resourceLocation) > checkTime;
+        }
+
+        public bool HasBeenModifiedSince(HTTPHeaderData headers, DateTime checkTime) { return HasBeenModifiedSince(GetFinalResourceLocation(headers), checkTime); }
+
+        public HTTPResponse GetResource(HTTPHeaderData headers)
+        {
+            string resourceLoc = GetFinalResourceLocation(headers);
+            HTTPResponse response = new HTTPResponse(headers.HTTPVersion, EHTTPResponse.R200_OK);
+
+            if (File.Exists(resourceLoc))
+            {
+                response.SetResponseBody(File.ReadAllBytes(resourceLoc), MIMETypeManager.GetMIMEFromFilePath(resourceLoc), File.GetLastWriteTimeUtc(resourceLoc));
+                response.SetETag(resourceLoc);
             }
             else
             {

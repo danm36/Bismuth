@@ -35,11 +35,11 @@ namespace Bismuth
         R200_OK                             = 200,
         R201_Created                        = 201,
         R202_Accepted                       = 202,
-        R203_Non_AuthoritativeInformation   = 203,
+        R203_Non__AuthoritativeInformation  = 203,
         R204_NoContent                      = 204,
         R205_ResetContent                   = 205,
         R206_PartialContent                 = 206,
-        R207_Multi_Status                   = 207,
+        R207_Multi__Status                  = 207,
         R208_Alreadyreported                = 208,
         R226_IMUsed                         = 226,
 
@@ -61,31 +61,27 @@ namespace Bismuth
         R404_NotFound                           = 404,
         R405_MethodNotAllowed                   = 405,
         R406_NotAcceptable                      = 406,
-        R407                                    = 407,
-        R408                                    = 408,
-        R409                                    = 409,
+        R407_ProxyAuthenticationRequired        = 407,
+        R408_RequestTimeout                     = 408,
+        R409_Conflict                           = 409,
         R410_Gone                               = 410,
         R411_LengthRequired                     = 411,
-        R412                                    = 412,
-        R413                                    = 413,
-        R414                                    = 414,
-        R415                                    = 415,
-        R416                                    = 416,
-        R417                                    = 417,
-        R419                                    = 419,
-        R421                                    = 421,
-        R422                                    = 422,
-        R423                                    = 423,
-        R424                                    = 424,
+        R412_PreconditionFailed                 = 412,
+        R413_PayloadTooLarge                    = 413,
+        R414_Request__URI_TooLong               = 414,
+        R415_UnsupportedMediaType               = 415,
+        R416_RequestedRangeNotSatisfiable       = 416,
+        R417_ExpectationFailed                  = 417,
+        R419_AuthenticationTimeout              = 419,
+        R421_MisdirectedRequest                 = 421,
+        R422_UnprocessableEntity                = 422,
+        R423_Locked                             = 423,
+        R424_FailedDependency                   = 424,
         R426_UpgradeRequired                    = 426,
-        R428                                    = 428,
+        R428_PreconditionRequired               = 428,
         R429_TooManyRequests                    = 429,
-        R431                                    = 431,
-        R440                                    = 440,
-        R449                                    = 449,
-        R450                                    = 450,
+        R431_RequestHeaderFieldsTooLarge        = 431,
         R451_UnavailableForLegalReasons         = 451,
-        R451_Redirect                           = 451,
 
         R500_InternalServerError                = 500,
         R501_NotImplemented                     = 501,
@@ -101,7 +97,6 @@ namespace Bismuth
         R511_NetworkAuthenticationRequired      = 511,
         R520_UnknownError                       = 520,
         R522_OriginConnectionTimeOut            = 522,
-
     }
 
     public class HTTPHeaderData
@@ -236,18 +231,22 @@ namespace Bismuth
             StringBuilder finalResponse = new StringBuilder();
             string code = responseCode.ToString();
 
-            bool isCodeNumber = true;
             for(int i = 1; i < code.Length; ++i)
             {
-                if(isCodeNumber && code[i] == '_')
+                if (code[i] == '_')
                 {
-                    isCodeNumber = false;
+                    if (code[i + 1] == '_')
+                    {
+                        finalResponse.Append('-');
+                        ++i;
+                    }
+                    else
+                    {
+                        finalResponse.Append(' ');
+                    }
                     continue;
                 }
-
-                if(code[i] == '_')
-                    finalResponse.Append('-');
-                else if (char.IsUpper(code[i]) && code[i - 1] != '-' && !char.IsUpper(code[i - 1]))
+                else if (char.IsUpper(code[i]) && code[i - 1] != '_' && !char.IsUpper(code[i - 1]))
                     finalResponse.Append(' ');
 
                 finalResponse.Append(code[i]);

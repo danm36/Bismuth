@@ -41,7 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ErrorResponseManager.cs" />
+    <Compile Include="BismuthGenericManager.cs" />
+    <Compile Include="EncodingManager.cs" />
+    <Compile Include="SimpleResponseManager.cs" />
     <Compile Include="HTTPHeaderData.cs" />
     <Compile Include="HTTPResponse.cs" />
     <Compile Include="LogManager.cs" />
@@ -50,6 +52,7 @@
     <Compile Include="NetworkManager.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RCON\RCONServer.cs" />
     <Compile Include="VirtualHost.cs" />
     <Compile Include="VirtualHostManager.cs" />
   </ItemGroup>

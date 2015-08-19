@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 
 namespace Bismuth
 {
-    public class MIMETypeManager
+    [BismuthManagerInfo("BISMUTH_MIME", "MIME Type Manager", "Handles the storage of MIME Types")]
+    public class MIMETypeManager : BismuthGenericManager
     {
         private static Dictionary<string, string> MIMETypes;
 
-        public static void Setup()
+        public override bool Setup()
         {
             MIMETypes = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase) {
                 #region MIME List
@@ -649,6 +650,8 @@ namespace Bismuth
                     MIMETypes.Add(kvp.Value, kvp.Key);
                 }
             }
+
+            return true;
         }
 
         public static string GetMIMEFromExtension(string extension)
