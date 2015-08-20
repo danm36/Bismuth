@@ -72,10 +72,12 @@ namespace Bismuth
         public static void Log(string source, string message) { Log(source + " - " + message); }
         public static void Warn(string source, string message) { Warn(source + " - " + message); }
         public static void Error(string source, string message) { Error(source + " - " + message); }
+        public static void Critical(string source, string message) { Critical(source + " - " + message); }
 
         public static void Notice(TcpClient client, string message) { Notice(client == null ? "Unknown Client" : client.Client.RemoteEndPoint.ToString(), message); }
         public static void Log(TcpClient client, string message){ Log(client == null ? "Unknown Client" : client.Client.RemoteEndPoint.ToString(), message); }
         public static void Warn(TcpClient client, string message) { Warn(client == null ? "Unknown Client" : client.Client.RemoteEndPoint.ToString(), message); }
         public static void Error(TcpClient client, string message) { Error(client == null ? "Unknown Client" : client.Client.RemoteEndPoint.ToString(), message); }
+        public static void Critical(TcpClient client, string message) { Critical(client == null ? "Unknown Client" : client.Client.RemoteEndPoint.ToString(), message); }
     }
 }

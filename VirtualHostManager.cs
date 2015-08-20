@@ -13,16 +13,29 @@ namespace Bismuth
 
         public override bool Setup()
         {
-            AddVirtualHost("*", new VirtualHost("H:/htdocs"));
-            AddVirtualHost("deventas.co.uk", new VirtualHost(Environment.CurrentDirectory + "/htdocs"));
-            AddVirtualHost("216.158.230.84", new VirtualHost(Environment.CurrentDirectory + "/htdocs"));
+            AddVirtualHost("*", "htdocs");
+            AddVirtualHost("deventas.co.uk", "htdocs");
+            AddVirtualHost("216.158.230.84", "htdocs");
+
+            RCON.RCONServer.AddRCONCommand("list-vhosts", "Lists all virtual hosts", (args) =>
+            {
+                StringBuilder toReturn = new StringBuilder();
+                toReturn.Append("List of Virtual Hosts:");
+
+                foreach (KeyValuePair<string, VirtualHost> vhost in vhosts)
+                {
+                    toReturn.Append("\r\n" + vhost.Value.Domain.PadRight(31) + " - " + vhost.Value.LocalRootDirectory);
+                }
+
+                return toReturn.ToString();
+            });
 
             return true;
         }
 
-        public static void AddVirtualHost(string domain, VirtualHost vhost)
+        public static void AddVirtualHost(string domain, string rootDirectory)
         {
-            vhosts.Add(domain, vhost);
+            vhosts.Add(domain, new VirtualHost(domain, rootDirectory));
         }
 
         public static VirtualHost GetVirtualHost(string host)

@@ -9,12 +9,14 @@ namespace Bismuth
 {
     public class VirtualHost
     {
+        public string Domain { get; private set; }
         public string LocalRootDirectory { get; private set; }
         public bool AllowExtensionlessFiles { get; private set; }
         public List<string> DirectoryIndexes = new List<string>() { "index.php", "index.html", "index.htm" };
 
-        public VirtualHost(string localRoot)
+        public VirtualHost(string domain, string localRoot)
         {
+            Domain = domain;
             LocalRootDirectory = localRoot.Replace('\\', '/');
         }
 

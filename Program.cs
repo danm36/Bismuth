@@ -1,8 +1,11 @@
 ﻿using Bismuth.RCON;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Threading;
 
 namespace Bismuth
 {
@@ -16,6 +19,7 @@ namespace Bismuth
             RS_RCONOnly,
         }
 
+        public static DateTime LaunchTime { get; private set; }
         static ERunState runState = ERunState.RS_Normal;
         public static bool ShutDown { get; private set; }
 
@@ -23,6 +27,8 @@ namespace Bismuth
 
         static void Main(string[] args)
         {
+            LaunchTime = DateTime.Now;
+
             Console.CancelKeyPress += (s, e) => { Shutdown(); };
             Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
 
@@ -47,11 +53,16 @@ namespace Bismuth
         static void RunBismuth(string[] args)
         {
             //Load plugins
+            if (!BismuthConfig.Setup())
+                return;
+
+            BismuthThreadPool.Setup();
             SetupManagersFromLoadedAssemblies();
-            ListManagers();
 
             ModeFlagBindings.AddBindings("HELP", "Displays this help text", new string[] { "h", "help" });
-            RCONServer.AddRCONCommand("list-managers", (a) => { return ListManagers(true); });
+            RCONServer.AddRCONCommand("version", "Lists the Bismuth version information", (a) => { return Program.GetFullProgramVersionString(); });
+            RCONServer.AddRCONCommand("status", "Lists various statistics about the current Bismuth process", (a) => { return GetStatus(true); });
+            RCONServer.AddRCONCommand("list-managers", "Lists all currently running managers", (a) => { return ListManagers(true); });
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -80,7 +91,7 @@ namespace Bismuth
             {
                 //TODO: Handle plugin receive handler
                 NetworkManager.ListenForNewConnections();
-                NetworkManager.ManageThreadPool();
+                Thread.Sleep(1);
             }
             LogManager.Log("Main Thread", "Primary execution loop quit");
         }
@@ -95,6 +106,7 @@ namespace Bismuth
 
             LogManager.Log("SHUTDOWN", "Beginning Bismuth shutdown");
             ShutdownManagers();
+            BismuthThreadPool.Shutdown();
             LogManager.Log("SHUTDOWN", "Bismuth shutdown complete");
             Console.ReadKey();
         }
@@ -198,9 +210,9 @@ namespace Bismuth
 
         public static string ListManagers(bool bSilent = false)
         {
-            string toReturn = "";
+            StringBuilder toReturn = new StringBuilder();
 
-            toReturn += "List of currently running managers:\r\n";
+            toReturn.Append("List of currently running managers:\r\n");
             if (!bSilent) LogManager.WriteLine("List of currently running managers:");
 
             for (int i = 0; i < managers.Count; ++i)
@@ -212,7 +224,7 @@ namespace Bismuth
                 string name = ("[" + managers[i].Item1.Name + "]").PadRight(31) + " ";
                 string description = managers[i].Item1.Description + "\r\n";
 
-                toReturn += uid + name + description;
+                toReturn.Append(uid + name + description);
 
                 if (!bSilent)
                 {
@@ -222,7 +234,27 @@ namespace Bismuth
                 }
             }
 
-            return toReturn;
+            return toReturn.ToString();
+        }
+
+        public static string GetStatus(bool bSilent = false)
+        {
+            StringBuilder toReturn = new StringBuilder();
+            Process currentProcess = Process.GetCurrentProcess();
+            TimeSpan Uptime = DateTime.Now - LaunchTime;
+            TimeSpan TrueProcessorTime = TimeSpan.FromTicks(currentProcess.TotalProcessorTime.Ticks / Environment.ProcessorCount);
+
+            toReturn.Append("Server status at " + DateTime.Now.ToString("r") + "\r\n");
+            toReturn.Append("     Server Started: " + LaunchTime.ToString("r") + "\r\n");
+            toReturn.Append("             Uptime: " + Uptime + "\r\n");
+            toReturn.Append("     Total CPU Time: " + TrueProcessorTime + " on " + Environment.ProcessorCount + " cores\r\n");
+            toReturn.Append("  Average CPU Usage: " + (100 * ((TrueProcessorTime.TotalMilliseconds * Environment.ProcessorCount) / Uptime.TotalMilliseconds)) + "%\r\n");
+            toReturn.Append("    Total RAM Usage: " + (currentProcess.WorkingSet64 / 1024 / 1024) + "MB\r\n");
+            toReturn.Append("   Thread Pool Info:\r\n");
+            toReturn.Append("                    " + BismuthThreadPool.GetActiveThreadCount() + " active threads\r\n");
+            toReturn.Append("                    " + BismuthThreadPool.GetTotalPossibleThreads() + " free threads\r\n");
+            toReturn.Append("                    " + BismuthThreadPool.GetPendingTaskCount() + " tasks waiting\r\n");
+            return toReturn.ToString();
         }
 
 

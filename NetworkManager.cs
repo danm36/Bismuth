@@ -16,7 +16,6 @@ namespace Bismuth
     public class NetworkManager : BismuthGenericManager
     {
         static TcpListener server = null;
-        static List<Thread> threadPool = new List<Thread>();
 
         public static int Port { get; private set; }
         public static int ConnectionTTL { get; private set; }
@@ -35,14 +34,7 @@ namespace Bismuth
 
         public override bool Shutdown()
         {
-            for (int i = 0; i < threadPool.Count; i++)
-            {
-                threadPool[i].Abort();
-            }
-
-            threadPool.Clear();
             server.Stop();
-
             return true;
         }
 
@@ -51,18 +43,7 @@ namespace Bismuth
             if (!Program.ShutDown && server.Pending())
             {
                 TcpClient client = server.AcceptTcpClient();
-                Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientThread));
-                threadPool.Add(clientThread);
-                clientThread.Start(client);
-            }
-        }
-
-        public static void ManageThreadPool()
-        {
-            for (int i = 0; i < threadPool.Count; i++)
-            {
-                if (!threadPool[i].IsAlive)
-                    threadPool.RemoveAt(i--);
+                BismuthThreadPool.StartThread(HandleClientThread, client);
             }
         }
 

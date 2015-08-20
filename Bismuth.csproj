@@ -41,7 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BismuthConfig.cs" />
     <Compile Include="BismuthGenericManager.cs" />
+    <Compile Include="BismuthThreadPool.cs" />
     <Compile Include="EncodingManager.cs" />
     <Compile Include="SimpleResponseManager.cs" />
     <Compile Include="HTTPHeaderData.cs" />
@@ -58,6 +60,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="cfg\000-server.cfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
