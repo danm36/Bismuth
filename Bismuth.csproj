@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AuthManager.cs" />
     <Compile Include="BismuthConfig.cs" />
     <Compile Include="BismuthGenericManager.cs" />
     <Compile Include="BismuthThreadPool.cs" />

@@ -50,9 +50,14 @@ namespace Bismuth
                 return;
             hasSetup = true;
 
-            int maxThreadCount = Math.Min(BismuthConfig.GetGlobalConfigValue<int>("ThreadPool.MaxThreads"), MAX_THREADS);
+            int maxThreadCount = Math.Min(BismuthConfig.GetConfigValue<int>("ThreadPool.MaxThreads", DEFAULT_THREAD_COUNT), MAX_THREADS);
             if (maxThreadCount <= 0)
+            {
+                LogManager.Warn("ThreadPool", "Invalid thread pool count '" + maxThreadCount + "', defaulting to " + DEFAULT_THREAD_COUNT + " threads");
                 maxThreadCount = DEFAULT_THREAD_COUNT;
+            }
+
+            LogManager.Log("ThreadPool", "Starting thread pool with " + maxThreadCount + " threads");
 
             for(int i = 0; i < maxThreadCount; ++i)
             {
@@ -60,6 +65,8 @@ namespace Bismuth
                 worker.Start();
                 WorkerThreads.AddLast(worker);
             }
+
+            LogManager.Log("ThreadPool", "Thread pool started");
         }
 
         public static void Shutdown()

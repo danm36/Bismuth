@@ -169,30 +169,99 @@ namespace Bismuth
             return true;
         }
 
-        public static object GetGlobalConfigValue(string key)
+        public static object GetConfigValue(string key)
+        {
+            return GetConfigValue(key, (string[])null);
+        }
+
+        public static object GetConfigValue(string key, object defaultIfNotFound)
+        {
+            return GetConfigValue(key, defaultIfNotFound, (string[])null);
+        }
+
+        public static object GetConfigValue(string key, string filter)
+        {
+            return GetConfigValue(key, null, new string[] { filter });
+        }
+
+        public static object GetConfigValue(string key, string[] filters)
+        {
+            return GetConfigValue(key, null, filters);
+        }
+
+        public static object GetConfigValue(string key, object defaultIfNotFound, string filter)
+        {
+            return GetConfigValue(key, defaultIfNotFound, new string[] { filter });
+        }
+
+        public static object GetConfigValue(string key, object defaultIfNotFound, string[] filters)
         {
             object currentObject = null;
+            List<string> trueFilters = new List<string>() { "Server" };
+            if (filters != null && filters.Length > 0)
+                trueFilters.AddRange(filters);
 
             foreach (BismuthConfigSection section in configSections)
             {
-                if (section.MatchFilter("Server") && section.HasConfigEntry(key))
-                    currentObject = section.GetConfigValue(key);
+                if (!section.HasConfigEntry(key))
+                    continue;
+
+                for (int i = 0; i < trueFilters.Count; i++)
+                {
+                    if (section.MatchFilter(trueFilters[i]))
+                        currentObject = section.GetConfigValue(key);
+                }
             }
 
             return currentObject;
         }
 
-        public static T GetGlobalConfigValue<T>(string key)
+        public static T GetConfigValue<T>(string key)
         {
-            T currentObject = default(T);
+            return GetConfigValue<T>(key, (string[])null);
+        }
+
+        public static T GetConfigValue<T>(string key, T defaultIfNotFound)
+        {
+            return GetConfigValue<T>(key, defaultIfNotFound, (string[])null);
+        }
+
+        public static T GetConfigValue<T>(string key, string filter)
+        {
+            return GetConfigValue<T>(key, default(T), new string[] { filter });
+        }
+
+        public static T GetConfigValue<T>(string key, string[] filters)
+        {
+            return GetConfigValue<T>(key, default(T), filters);
+        }
+
+        public static T GetConfigValue<T>(string key, T defaultIfNotFound, string filter)
+        {
+            return GetConfigValue<T>(key, defaultIfNotFound, new string[] { filter });
+        }
+
+        public static T GetConfigValue<T>(string key, T defaultIfNotFound, string[] filters)
+        {
+            T currentObject = defaultIfNotFound;
+            List<string> trueFilters = new List<string>() { "Server" };
+            if (filters != null && filters.Length > 0)
+                trueFilters.AddRange(filters);
 
             foreach (BismuthConfigSection section in configSections)
             {
-                if (section.MatchFilter("Server") && section.HasConfigEntry(key))
-                    currentObject = section.GetConfigValue<T>(key);
+                if (!section.HasConfigEntry(key))
+                    continue;
+
+                for (int i = 0; i < trueFilters.Count; i++)
+                {
+                    if (section.MatchFilter(trueFilters[i]))
+                        currentObject = section.GetConfigValue<T>(key);
+                }
             }
 
             return currentObject;
         }
+
     }
 }
